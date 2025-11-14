@@ -59,12 +59,12 @@ pipeline {
 
           sshagent (credentials: ["${SSH_CRED}"]) {
             sh """
-               ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                 docker pull ${imageToDeploy} &&
-                 docker stop ${CONTAINER_NAME} || true &&
-                 docker rm ${CONTAINER_NAME} || true &&
-                 docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${APP_PORT} --restart unless-stopped ${imageToDeploy}
-               '
+            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+            sudo docker pull ${imageToDeploy} &&
+            sudo docker stop ${CONTAINER_NAME} || true &&
+            sudo docker rm ${CONTAINER_NAME} || true &&
+            sudo docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${APP_PORT} --restart unless-stopped ${imageToDeploy}
+                '
             """
 
             sh """
