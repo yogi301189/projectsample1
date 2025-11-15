@@ -6,7 +6,7 @@ pipeline {
     DOCKER_CRED = "dockerhub-creds"       // DockerHub credential ID
     SSH_CRED = "ec2-ssh"                   // SSH credential ID (the one that worked)
     EC2_USER = "ubuntu"                   // SSH username
-    EC2_HOST = "13.201.194.0"             // EC2 public IP
+    EC2_HOST = "13.204.69.38"             // EC2 public IP
     CONTAINER_NAME = "projectsample"      // container name on EC2
     APP_PORT = 5000                       // port Flask app uses inside container
     HOST_PORT = 5000                      // port exposed on EC2
