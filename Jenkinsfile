@@ -2,15 +2,20 @@ pipeline {
   agent any
 
   environment {
-    IMAGE = "yogi3011/projectsample"      // DockerHub repo
-    DOCKER_CRED = "dockerhub-creds"       // DockerHub credential ID
-    SSH_CRED = "ec2-ssh"                   // SSH credential ID (the one that worked)
-    EC2_USER = "ubuntu"                   // SSH username
-    EC2_HOST = "13.204.69.38"             // EC2 public IP
-    CONTAINER_NAME = "projectsample"      // container name on EC2
-    APP_PORT = 5000                       // port Flask app uses inside container
-    HOST_PORT = 5000                      // port exposed on EC2
-  }
+    IMAGE        = "yogi3011/projectsample"
+    DOCKER_CRED  = "dockerhub-creds"
+    SSH_CRED     = "ec2-ssh"
+    EC2_USER     = "ubuntu"
+    EC2_HOST     = "13.201.98.19"
+    CONTAINER_NAME = "projectsample"
+    APP_PORT     = 5000
+    HOST_PORT    = 5000
+
+    // 🔽 NEW for GitOps
+    HELM_REPO_URL  = "https://github.com/yogi301189/flask-app-helm.git"
+    HELM_REPO_DIR  = "flask-app-helm"
+    HELM_GIT_CRED  = "git-id"    // Jenkins credential ID you created
+}
 
   stages {
 
@@ -75,6 +80,51 @@ pipeline {
         }
       }
     }
+stage('Update Helm values.yaml in Git (GitOps)') {
+  steps {
+    script {
+      // The image tag we just built
+      def newTag = env.SHORT_COMMIT
+
+      // Clean old clone if it exists
+      sh "rm -rf ${HELM_REPO_DIR}"
+
+      // Clone Helm chart repo using Jenkins credentials
+      withCredentials([usernamePassword(credentialsId: HELM_GIT_CRED,
+                                       usernameVariable: 'GIT_USER',
+                                       passwordVariable: 'GIT_TOKEN')]) {
+
+        sh """
+          git clone https://${GIT_USER}:${GIT_TOKEN}@${HELM_REPO_URL.replace('https://','')} ${HELM_REPO_DIR}
+          cd ${HELM_REPO_DIR}
+
+          echo "Updating image.tag in values.yaml to ${newTag}..."
+
+          # Update the 'tag:' under image: in values.yaml
+          # Assumes this structure:
+          # image:
+          #   repository: ...
+          #   pullPolicy: ...
+          #   tag: something
+          sed -i 's/^  tag: .*/  tag: \"${newTag}\"/' values.yaml
+
+          echo "Updated values.yaml:"
+          grep -A3 '^image:' values.yaml || true
+
+          git config user.email "jenkins@local"
+          git config user.name "Jenkins CI"
+
+          git status
+
+          git add values.yaml
+          git commit -m "Update image tag to ${newTag}" || echo "No changes to commit"
+
+          git push origin main
+        """
+      }
+    }
+  }
+}
 
     stage('Post-deploy Health Check') {
       steps {
